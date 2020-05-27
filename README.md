@@ -1,3 +1,5 @@
 # tcats README
 
-type check ats
+type check ats 
+
+<http://www.ats-lang.org/>

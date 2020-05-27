@@ -3,8 +3,10 @@
 	"displayName": "tcats",
 	"description": "type check ats",
 	"publisher": "qcfu-bu",
+    "homepage": "https://github.com/qcfu-bu/tcats-extension.git",
 	"repository": {
-		
+		"type": "git",
+		"url": "https://github.com/qcfu-bu/tcats-extension.git"
 	},
 	"version": "0.0.1",
 	"engines": {
