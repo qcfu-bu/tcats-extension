@@ -72,15 +72,24 @@ export default class TcatsLintingProvider {
 		subscriptions.push(this);
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection();
 
-        vscode.workspace.onDidOpenTextDocument(this.doTcats, this, subscriptions);
-        vscode.workspace.onDidSaveTextDocument(this.doTcats, this);
+        vscode.workspace.onDidOpenTextDocument((document) => {
+            this.doTcats(document);
+        } , this, subscriptions);
+        vscode.workspace.onDidSaveTextDocument((document) => {
+            this.doTcats(document);
+        }, this);
+        vscode.workspace.onDidChangeTextDocument((document) => {
+            this.diagnosticCollection.clear();
+        }, this);
         vscode.window.onDidChangeActiveTextEditor((textEditor) => {
             if (textEditor?.document) {
                 this.diagnosticCollection.clear();
                 this.doTcats(textEditor.document);
             }
         }, this);
-        vscode.workspace.textDocuments.forEach(this.doTcats, this);
+        vscode.workspace.textDocuments.forEach((document) => {
+            this.doTcats(document);
+        }, this);
     }
 
     public dispose(): void {
