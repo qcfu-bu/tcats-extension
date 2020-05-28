@@ -44,7 +44,7 @@ class TcatsLintingProvider {
         let decoded = [];
         errorChunks.forEach(item => {
             let path = item[0];
-            let msg = item[3].split(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)/)[0];
+            let msg = item[3].split(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/)[0];
             let rawLoc = item[1].match(/\d*\(line=(\d*), offs=(\d*)\) -- \d*\(line=(\d*), offs=(\d*)\)/).slice(1);
             let loc = new vscode.Range(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1, parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
             let error;
