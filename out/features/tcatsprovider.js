@@ -20,8 +20,9 @@ class TcatsLintingProvider {
             });
             childProcess.stderr.on('end', () => {
                 let decoded = this.decode(errorString);
-                decoded.forEach(item => {
+                decoded.forEach((item, index) => {
                     let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
+                    diagnostic.code = index.toString();
                     if (diagnostics[item.path]) {
                         diagnostics[item.path].push(diagnostic);
                     }
@@ -42,11 +43,13 @@ class TcatsLintingProvider {
         let errorStrings = errorString.split(/(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
         let errorChunks = _.chunk(errorStrings, 4);
         let decoded = [];
-        errorChunks.forEach(item => {
+        errorChunks.forEach((item, index) => {
             let path = item[0];
-            let msg = item[3].split(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/)[0];
+            let msg = item[3].replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "").replace(/\n*$/, "");
             let rawLoc = item[1].match(/\d*\(line=(\d*), offs=(\d*)\) -- \d*\(line=(\d*), offs=(\d*)\)/).slice(1);
-            let loc = new vscode.Range(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1, parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
+            let pos1 = new vscode.Position(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1);
+            let pos2 = new vscode.Position(parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
+            let loc = new vscode.Range(pos1, pos2);
             let error;
             if (/error.*/.test(item[2])) {
                 error = vscode.DiagnosticSeverity.Error;
