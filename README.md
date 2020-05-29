@@ -7,7 +7,7 @@ superior to what ats-mode has in my opinion.
 
 ## Requirements 
 
-Make sure that command `patscc` and other ATS dependencies is in the PATH.
+Make sure that command `patscc` and other ATS dependencies are in the PATH.
 Please refer to <http://www.ats-lang.org/> for detailed instruction on
 installing ATS.
 
