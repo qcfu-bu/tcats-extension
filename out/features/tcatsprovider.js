@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const path = require("path");
 const cp = require("child_process");
 const _ = require("lodash");
 const vscode = require("vscode");
@@ -10,15 +11,17 @@ class TcatsLintingProvider {
         }
         let errorString = '';
         let diagnostics = {};
-        diagnostics[textDocument.uri.path] = [];
-        let options = vscode.workspace.rootPath ? { cwd: vscode.workspace.rootPath } : undefined;
-        let args = ['-tcats', textDocument.fileName];
+        diagnostics[textDocument.fileName] = [];
+        let cwd = path.dirname(textDocument.fileName);
+        let fileName = path.basename(textDocument.fileName);
+        let options = { cwd: cwd };
+        let args = ['-tcats', fileName];
         let childProcess = cp.spawn('patscc', args, options);
         if (childProcess.pid) {
             childProcess.stderr.on('data', (data) => {
                 errorString += data.toString();
             });
-            childProcess.stderr.on('end', () => {
+            childProcess.on('close', () => {
                 let decoded = this.decode(errorString);
                 decoded.forEach((item, index) => {
                     let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
@@ -40,12 +43,13 @@ class TcatsLintingProvider {
         }
     }
     decode(errorString) {
-        let errorStrings = errorString.split(/(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
+        errorString = "\n" + errorString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");
+        let errorStrings = errorString.split(/\n(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
         let errorChunks = _.chunk(errorStrings, 4);
         let decoded = [];
         errorChunks.forEach((item, index) => {
             let path = item[0];
-            let msg = item[3].replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "").replace(/\n*$/, "");
+            let msg = item[3].replace(/\n*$/, "");
             let rawLoc = item[1].match(/\d*\(line=(\d*), offs=(\d*)\) -- \d*\(line=(\d*), offs=(\d*)\)/).slice(1);
             let pos1 = new vscode.Position(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1);
             let pos2 = new vscode.Position(parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
