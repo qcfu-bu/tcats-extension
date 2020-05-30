@@ -19,18 +19,6 @@
 	"activationEvents": [
 		"onLanguage:ats"
 	],
-	"contributes": {
-		"configuration": {
-			"title": "tcats",
-			"properties": {
-				"tcats.patscc": {
-					"type": "string",
-					"default": "patscc",
-					"description": "command to invoke ats type checking"
-				}
-			}
-		}
-	},
 	"main": "./out/extension.js",
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
