@@ -7,10 +7,9 @@ import * as vscode from 'vscode';
 
 export default class TcatsLintingProvider {
 
-	private diagnosticCollection!: vscode.DiagnosticCollection;
+    private diagnosticCollection!: vscode.DiagnosticCollection;
 
     private doTcats(textDocument: vscode.TextDocument) {
-
         if (textDocument.languageId !== 'ats') {
             return;
         }
@@ -21,31 +20,36 @@ export default class TcatsLintingProvider {
 
         let cwd = path.dirname(textDocument.fileName);
         let fileName = path.basename(textDocument.fileName);
+        let patscc:string | undefined = vscode.workspace.getConfiguration("tcats").get("patscc");
         let options = { cwd: cwd };
         let args = ['-tcats', fileName];
 
-        let childProcess = cp.spawn('patscc', args, options);
-        if (childProcess.pid) {
-            childProcess.stderr.on('data', (data: Buffer) => {
-                errorString += data.toString();
-            });
-            childProcess.on('close', () => {
-                let decoded = this.decode(errorString);
-                decoded.forEach((item, index) => {
-                    let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
-                    diagnostic.code = index.toString();
-                    if (diagnostics[item.path]) {
-                        diagnostics[item.path].push(diagnostic);
-                    } else {
-                        diagnostics[item.path] = [diagnostic];
+        if (patscc) {
+            let childProcess = cp.spawn(patscc, args, options);
+            if (childProcess.pid) {
+                childProcess.stderr.on('data', (data: Buffer) => {
+                    errorString += data.toString();
+                });
+                childProcess.on('close', () => {
+                    let decoded = this.decode(errorString);
+                    decoded.forEach((item, index) => {
+                        let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
+                        diagnostic.code = index.toString();
+                        if (diagnostics[item.path]) {
+                            diagnostics[item.path].push(diagnostic);
+                        } else {
+                            diagnostics[item.path] = [diagnostic];
+                        }
+                    });
+                    for (var key in diagnostics) {
+                        this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
                     }
                 });
-                for (var key in diagnostics) {
-                    this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
-                }
-            });
+            } else {
+                vscode.window.showErrorMessage(`failed to execute ${patscc} -tcats`);
+            }
         } else {
-	        vscode.window.showErrorMessage("failed to execute patscc -tcats");
+            vscode.window.showErrorMessage(`failed to find ${patscc}`);
         }
     }
 
