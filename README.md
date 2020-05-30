@@ -7,16 +7,14 @@ superior to what ats-mode has in my opinion.
 
 ## Requirements 
 
-Make sure that command `patscc` and other ATS dependencies are in the PATH.
-Please refer to <http://www.ats-lang.org/> for detailed instruction on
-installing ATS.
+Make sure that command `patscc` and other ATS tools are in the PATH. Please
+refer to <http://www.ats-lang.org/> for detailed instruction on installing ATS.
+
+For Windows computers, ATS installation through
+[WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) is required.
 
 ## Screenshot
 
-![tcats](images/tcats.png)
+Certified programming in ATS.
 
-## Known Issues
-
-This extension has only been tested on macOS, it may not work on Linux or
-Windows. It is possible that the need for POSIX emulation to run ATS on Windows
-breaks VScode's path system.
+![certified](images/tcats.png)
