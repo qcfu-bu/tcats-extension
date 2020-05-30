@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
 const cp = require("child_process");
 const _ = require("lodash");
+const os = require("os");
 const vscode = require("vscode");
 class TcatsLintingProvider {
     doTcats(textDocument) {
@@ -14,9 +15,13 @@ class TcatsLintingProvider {
         diagnostics[textDocument.fileName] = [];
         let cwd = path.dirname(textDocument.fileName);
         let fileName = path.basename(textDocument.fileName);
-        let patscc = vscode.workspace.getConfiguration("tcats").get("patscc");
-        let options = { cwd: cwd };
+        let patscc = 'patscc';
         let args = ['-tcats', fileName];
+        if (os.type() === 'Windows_NT') {
+            patscc = 'wsl';
+            args = ['patscc', '-tcats', fileName];
+        }
+        let options = { cwd: cwd };
         if (patscc) {
             let childProcess = cp.spawn(patscc, args, options);
             if (childProcess.pid) {
@@ -36,7 +41,14 @@ class TcatsLintingProvider {
                         }
                     });
                     for (var key in diagnostics) {
-                        this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
+                        let path = key.match(/\/mnt\/([^\/]*)(\/.*)/);
+                        if (os.type() === 'Windows_NT' && path) {
+                            let winPath = path[1] + ':' + path[2].replace(/\//g, '\\');
+                            this.diagnosticCollection.set(vscode.Uri.file(winPath), diagnostics[key]);
+                        }
+                        else {
+                            this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
+                        }
                     }
                 });
             }

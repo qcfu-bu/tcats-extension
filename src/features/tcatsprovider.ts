@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as url from 'url';
+import * as os from 'os';
 
 import * as vscode from 'vscode';
 
@@ -20,9 +21,13 @@ export default class TcatsLintingProvider {
 
         let cwd = path.dirname(textDocument.fileName);
         let fileName = path.basename(textDocument.fileName);
-        let patscc:string | undefined = vscode.workspace.getConfiguration("tcats").get("patscc");
-        let options = { cwd: cwd };
+        let patscc:string = 'patscc';
         let args = ['-tcats', fileName];
+        if (os.type() === 'Windows_NT') {
+            patscc = 'wsl';
+            args = ['patscc', '-tcats', fileName];
+        }
+        let options = { cwd: cwd };
 
         if (patscc) {
             let childProcess = cp.spawn(patscc, args, options);
@@ -42,7 +47,13 @@ export default class TcatsLintingProvider {
                         }
                     });
                     for (var key in diagnostics) {
-                        this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
+                        let path = key.match(/\/mnt\/([^\/]*)(\/.*)/);
+                        if (os.type() === 'Windows_NT' && path) {
+                            let winPath = path[1] + ':' + path[2].replace(/\//g, '\\');
+                            this.diagnosticCollection.set(vscode.Uri.file(winPath), diagnostics[key]);
+                        } else {
+                            this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
+                        }
                     }
                 });
             } else {
