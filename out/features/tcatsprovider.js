@@ -25,30 +25,41 @@ class TcatsLintingProvider {
         if (patscc) {
             let childProcess = cp.spawn(patscc, args, options);
             if (childProcess.pid) {
+                console.log("pid: ", childProcess.pid);
                 childProcess.stderr.on('data', (data) => {
                     errorString += data.toString();
                 });
-                childProcess.on('close', () => {
-                    let decoded = this.decode(errorString);
-                    decoded.forEach((item, index) => {
-                        let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
-                        diagnostic.code = index.toString();
-                        if (diagnostics[item.path]) {
-                            diagnostics[item.path].push(diagnostic);
+                // childProcess.on("exit", () => {
+                //     console.log("exit");
+                // });
+                childProcess.on("exit", (code) => {
+                    if (errorString.length > 0) {
+                        let decoded = this.decode(errorString);
+                        decoded.forEach((item, index) => {
+                            let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
+                            diagnostic.code = index.toString();
+                            if (diagnostics[item.path]) {
+                                diagnostics[item.path].push(diagnostic);
+                            }
+                            else {
+                                diagnostics[item.path] = [diagnostic];
+                            }
+                        });
+                        for (var key in diagnostics) {
+                            let path = key.match(/\/mnt\/([^\/]*)(\/.*)/);
+                            if (os.type() === 'Windows_NT' && path) {
+                                let winPath = path[1] + ':' + path[2].replace(/\//g, '\\');
+                                this.diagnosticCollection.set(vscode.Uri.file(winPath), diagnostics[key]);
+                            }
+                            else {
+                                this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
+                            }
                         }
-                        else {
-                            diagnostics[item.path] = [diagnostic];
-                        }
-                    });
-                    for (var key in diagnostics) {
-                        let path = key.match(/\/mnt\/([^\/]*)(\/.*)/);
-                        if (os.type() === 'Windows_NT' && path) {
-                            let winPath = path[1] + ':' + path[2].replace(/\//g, '\\');
-                            this.diagnosticCollection.set(vscode.Uri.file(winPath), diagnostics[key]);
-                        }
-                        else {
-                            this.diagnosticCollection.set(vscode.Uri.file(key), diagnostics[key]);
-                        }
+                    }
+                    else if (code !== 0) {
+                        let loc = new vscode.Range(0, 0, 0, 0);
+                        let diagnostic = new vscode.Diagnostic(loc, "fatal error", vscode.DiagnosticSeverity.Error);
+                        this.diagnosticCollection.set(textDocument.uri, [diagnostic]);
                     }
                 });
             }
