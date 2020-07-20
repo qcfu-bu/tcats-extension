@@ -43,7 +43,7 @@
 		"vscode-test": "^1.3.0"
 	},
 	"dependencies": {
-		"lodash": "^4.17.15"
+		"lodash": "^4.17.19"
 	},
 	"extensionDependencies": [
 		"sparverius.language-ats-temptory"
