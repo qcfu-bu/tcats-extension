@@ -1,7 +1,6 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
-import * as url from 'url';
 import * as os from 'os';
 
 import * as vscode from 'vscode';
