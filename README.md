@@ -2,8 +2,7 @@
 
 Inspired by ats-mode for emacs, this extension brings ATS error diagnostics to
 VScode. The hope is to lower the barrier to entry for ATS programming as emacs
-can be difficult to learn. Sparverius's ATS-Temptory syntax highlighting is also
-superior to what ats-mode has in my opinion.
+can be difficult to learn.
 
 ## Requirements 
 

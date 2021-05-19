@@ -14,12 +14,37 @@
 	},
 	"icon": "images/ATS-Logo.png",
 	"categories": [
-		"Other"
+		"Programming Languages"
 	],
 	"activationEvents": [
 		"onLanguage:ats"
 	],
 	"main": "./out/extension.js",
+	"contributes": {
+		"languages": [
+			{
+				"id": "ats",
+				"aliases": [
+					"ATS",
+					"ats",
+					"temptory"
+				],
+				"extensions": [
+					".dats",
+					".sats",
+					".hats"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "ats",
+				"scopeName": "source.ats",
+				"path": "./syntaxes/ats.tmLanguage"
+			}
+		]
+	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
@@ -44,8 +69,5 @@
 	},
 	"dependencies": {
 		"lodash": "^4.17.19"
-	},
-	"extensionDependencies": [
-		"sparverius.language-ats-temptory"
-	]
+	}
 }
