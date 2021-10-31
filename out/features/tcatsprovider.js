@@ -35,12 +35,6 @@ class TcatsLintingProvider {
                 childProcess.on("exit", (code) => {
                     if (outputString.length > 0) {
                         let decoded = this.decode(outputString);
-                        // if(outputString.toString().includes("**SHOWTYPE")) {
-                        //     decoded = this.decodeShowType(outputString);
-                        // }
-                        // else{
-                        //     decoded = this.decode(outputString);
-                        // }
                         decoded.forEach((item, index) => {
                             let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
                             diagnostic.code = index.toString();
@@ -82,18 +76,6 @@ class TcatsLintingProvider {
         let pos1 = new vscode.Position(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1);
         let pos2 = new vscode.Position(parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
         return new vscode.Range(pos1, pos2);
-    }
-    decodeShowType(showTypeString) {
-        let showTypeLines = showTypeString.trim().split("\n");
-        let showTypeChunks = showTypeLines.map(x => x.split(/(\/[^:]*): ([^:]*): /));
-        let decoded = [];
-        showTypeChunks.forEach((item, index) => {
-            let path = item[1];
-            let msg = item[3];
-            let loc = this.getRangeFromRawString(item[2]);
-            decoded.push({ path: path, loc: loc, error: vscode.DiagnosticSeverity.Information, msg: msg });
-        });
-        return decoded;
     }
     decode(outputString) {
         outputString = "\n" + outputString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");

@@ -40,12 +40,6 @@ export default class TcatsLintingProvider {
                 childProcess.on("exit", (code) => {
                     if (outputString.length > 0) {
                         let decoded = this.decode(outputString);
-                       // if(outputString.toString().includes("**SHOWTYPE")) {
-                       //     decoded = this.decodeShowType(outputString);
-                       // }
-                       // else{
-                       //     decoded = this.decode(outputString);
-                       // }
                         decoded.forEach((item, index) => {
                              let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
                             diagnostic.code = index.toString();
@@ -85,24 +79,11 @@ export default class TcatsLintingProvider {
         return new vscode.Range(pos1, pos2);
     }
 
-    private decodeShowType(showTypeString: String) {
-        let showTypeLines: string[] = showTypeString.trim().split("\n");
-        let showTypeChunks: string[][] = showTypeLines.map(x => x.split(/(\/[^:]*): ([^:]*): /));
-        let decoded: { path: string, loc: vscode.Range, error: vscode.DiagnosticSeverity, msg: string }[] = [];
-        showTypeChunks.forEach((item, index) => {
-            let path = item[1];
-            let msg = item[3];
-            let loc = this.getRangeFromRawString(item[2]);
-            decoded.push({ path: path, loc: loc, error: vscode.DiagnosticSeverity.Information, msg: msg });
-        });
-        return decoded;
-    }
-
     private decode(outputString: string) {
         outputString = "\n" + outputString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");
-        
+
         let outputLines: string[] = outputString.trim().split("\n");
-        let showTypeLines: string[] = outputLines.filter( x => x.includes("**SHOWTYPE"));
+        let showTypeLines: string[] = outputLines.filter(x => x.includes("**SHOWTYPE"));
         let decoded: { path: string, loc: vscode.Range, error: vscode.DiagnosticSeverity, msg: string }[] = [];
         showTypeLines.forEach((item, index) => {
             let parsedString = item.split(/(\/[^:]*): ([^:]*): /);
@@ -113,7 +94,7 @@ export default class TcatsLintingProvider {
         });
 
         let errorLines = outputLines.filter(x => !x.includes("**SHOWTYPE"));
-        if (errorLines.length === 0) {return decoded;}
+        if (errorLines.length === 0) { return decoded; }
 
         let errorText: string = "\n" + outputLines.filter(x => !x.includes("**SHOWTYPE")).join('\n');
         let errorStrings: string[] = errorText.split(/\n(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
