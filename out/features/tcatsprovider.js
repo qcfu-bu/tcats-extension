@@ -34,13 +34,13 @@ class TcatsLintingProvider {
                 });
                 childProcess.on("exit", (code) => {
                     if (outputString.length > 0) {
-                        let decoded;
-                        if (outputString.toString().includes("**SHOWTYPE")) {
-                            decoded = this.decodeShowType(outputString);
-                        }
-                        else {
-                            decoded = this.decode(outputString);
-                        }
+                        let decoded = this.decode(outputString);
+                        // if(outputString.toString().includes("**SHOWTYPE")) {
+                        //     decoded = this.decodeShowType(outputString);
+                        // }
+                        // else{
+                        //     decoded = this.decode(outputString);
+                        // }
                         decoded.forEach((item, index) => {
                             let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
                             diagnostic.code = index.toString();
@@ -95,11 +95,25 @@ class TcatsLintingProvider {
         });
         return decoded;
     }
-    decode(errorString) {
-        errorString = "\n" + errorString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");
-        let errorStrings = errorString.split(/\n(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
-        let errorChunks = _.chunk(errorStrings, 4);
+    decode(outputString) {
+        outputString = "\n" + outputString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");
+        let outputLines = outputString.trim().split("\n");
+        let showTypeLines = outputLines.filter(x => x.includes("**SHOWTYPE"));
         let decoded = [];
+        showTypeLines.forEach((item, index) => {
+            let parsedString = item.split(/(\/[^:]*): ([^:]*): /);
+            let path = parsedString[1];
+            let msg = parsedString[3];
+            let loc = this.getRangeFromRawString(parsedString[2]);
+            decoded.push({ path: path, loc: loc, error: vscode.DiagnosticSeverity.Information, msg: msg });
+        });
+        let errorLines = outputLines.filter(x => !x.includes("**SHOWTYPE"));
+        if (errorLines.length === 0) {
+            return decoded;
+        }
+        let errorText = "\n" + outputLines.filter(x => !x.includes("**SHOWTYPE")).join('\n');
+        let errorStrings = errorText.split(/\n(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
+        let errorChunks = _.chunk(errorStrings, 4);
         errorChunks.forEach((item, index) => {
             let path = item[0];
             let msg = item[3].replace(/\n*$/, "");
