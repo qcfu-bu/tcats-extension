@@ -13,8 +13,7 @@ export default class TcatsLintingProvider {
         if (textDocument.languageId !== 'ats') {
             return;
         }
-
-        let errorString: string = '';
+        let outputString: string = '';
         let diagnostics: { [path: string]: vscode.Diagnostic[] } = {};
         diagnostics[textDocument.fileName] = [];
 
@@ -33,16 +32,22 @@ export default class TcatsLintingProvider {
             if (childProcess.pid) {
                 console.log("pid: ", childProcess.pid);
                 childProcess.stderr.on('data', (data: Buffer) => {
-                    errorString += data.toString();
+                    outputString += data.toString();
                 });
-                // childProcess.on("exit", () => {
-                //     console.log("exit");
-                // });
+                childProcess.stdout.on('data', (data: Buffer) => {
+                    outputString += data.toString();
+                });
                 childProcess.on("exit", (code) => {
-                    if (errorString.length > 0) {
-                        let decoded = this.decode(errorString);
+                    if (outputString.length > 0) {
+                        let decoded; 
+                        if(outputString.toString().includes("**SHOWTYPE")) {
+                            decoded = this.decodeShowType(outputString);
+                        }
+                        else{
+                            decoded = this.decode(outputString);
+                        }
                         decoded.forEach((item, index) => {
-                            let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
+                             let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
                             diagnostic.code = index.toString();
                             if (diagnostics[item.path]) {
                                 diagnostics[item.path].push(diagnostic);
@@ -73,6 +78,26 @@ export default class TcatsLintingProvider {
         }
     }
 
+    private getRangeFromRawString(str: String) {
+        let rawLoc = str.match(/\d*\(line=(\d*), offs=(\d*)\) -- \d*\(line=(\d*), offs=(\d*)\)/)!.slice(1);
+        let pos1 = new vscode.Position(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1);
+        let pos2 = new vscode.Position(parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
+        return new vscode.Range(pos1, pos2);
+    }
+
+    private decodeShowType(showTypeString: String) {
+        let showTypeLines: string[] = showTypeString.trim().split("\n");
+        let showTypeChunks: string[][] = showTypeLines.map(x => x.split(/(\/[^:]*): ([^:]*): /));
+        let decoded: { path: string, loc: vscode.Range, error: vscode.DiagnosticSeverity, msg: string }[] = [];
+        showTypeChunks.forEach((item, index) => {
+            let path = item[1];
+            let msg = item[3];
+            let loc = this.getRangeFromRawString(item[2]);
+            decoded.push({ path: path, loc: loc, error: vscode.DiagnosticSeverity.Information, msg: msg });
+        });
+        return decoded;
+    }
+
     private decode(errorString: string) {
         errorString = "\n" + errorString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");
         let errorStrings: string[] = errorString.split(/\n(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
@@ -81,11 +106,7 @@ export default class TcatsLintingProvider {
         errorChunks.forEach((item, index) => {
             let path = item[0];
             let msg = item[3].replace(/\n*$/, "");
-            let rawLoc = item[1].match(/\d*\(line=(\d*), offs=(\d*)\) -- \d*\(line=(\d*), offs=(\d*)\)/)!.slice(1);
-
-            let pos1 = new vscode.Position(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1);
-            let pos2 = new vscode.Position(parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
-            let loc = new vscode.Range(pos1, pos2);
+            let loc = this.getRangeFromRawString(item[1]);
 
             let error: vscode.DiagnosticSeverity;
             if (/error.*/.test(item[2])) {
