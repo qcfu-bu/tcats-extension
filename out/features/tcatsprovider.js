@@ -10,7 +10,7 @@ class TcatsLintingProvider {
         if (textDocument.languageId !== 'ats') {
             return;
         }
-        let errorString = '';
+        let outputString = '';
         let diagnostics = {};
         diagnostics[textDocument.fileName] = [];
         let cwd = path.dirname(textDocument.fileName);
@@ -27,14 +27,14 @@ class TcatsLintingProvider {
             if (childProcess.pid) {
                 console.log("pid: ", childProcess.pid);
                 childProcess.stderr.on('data', (data) => {
-                    errorString += data.toString();
+                    outputString += data.toString();
                 });
-                // childProcess.on("exit", () => {
-                //     console.log("exit");
-                // });
+                childProcess.stdout.on('data', (data) => {
+                    outputString += data.toString();
+                });
                 childProcess.on("exit", (code) => {
-                    if (errorString.length > 0) {
-                        let decoded = this.decode(errorString);
+                    if (outputString.length > 0) {
+                        let decoded = this.decode(outputString);
                         decoded.forEach((item, index) => {
                             let diagnostic = new vscode.Diagnostic(item.loc, item.msg, item.error);
                             diagnostic.code = index.toString();
@@ -71,18 +71,35 @@ class TcatsLintingProvider {
             vscode.window.showErrorMessage(`failed to find ${patscc}`);
         }
     }
-    decode(errorString) {
-        errorString = "\n" + errorString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");
-        let errorStrings = errorString.split(/\n(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
-        let errorChunks = _.chunk(errorStrings, 4);
+    getRangeFromRawString(str) {
+        let rawLoc = str.match(/\d*\(line=(\d*), offs=(\d*)\) -- \d*\(line=(\d*), offs=(\d*)\)/).slice(1);
+        let pos1 = new vscode.Position(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1);
+        let pos2 = new vscode.Position(parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
+        return new vscode.Range(pos1, pos2);
+    }
+    decode(outputString) {
+        outputString = "\n" + outputString.replace(/(?:patsopt.*\nexit.*)|(?:typecheck.*\nexit.*)|(?:exit\(.*\): .*)/, "");
+        let outputLines = outputString.trim().split("\n");
+        let showTypeLines = outputLines.filter(x => x.includes("**SHOWTYPE"));
         let decoded = [];
+        showTypeLines.forEach((item, index) => {
+            let parsedString = item.split(/(\/[^:]*): ([^:]*): /);
+            let path = parsedString[1];
+            let msg = parsedString[3];
+            let loc = this.getRangeFromRawString(parsedString[2]);
+            decoded.push({ path: path, loc: loc, error: vscode.DiagnosticSeverity.Information, msg: msg });
+        });
+        let errorLines = outputLines.filter(x => !x.includes("**SHOWTYPE"));
+        if (errorLines.length === 0) {
+            return decoded;
+        }
+        let errorText = "\n" + outputLines.filter(x => !x.includes("**SHOWTYPE")).join('\n');
+        let errorStrings = errorText.split(/\n(\/[^:]*): ([^:]*): ([^:]*): /).filter(item => { return item !== ""; });
+        let errorChunks = _.chunk(errorStrings, 4);
         errorChunks.forEach((item, index) => {
             let path = item[0];
             let msg = item[3].replace(/\n*$/, "");
-            let rawLoc = item[1].match(/\d*\(line=(\d*), offs=(\d*)\) -- \d*\(line=(\d*), offs=(\d*)\)/).slice(1);
-            let pos1 = new vscode.Position(parseInt(rawLoc[0]) - 1, parseInt(rawLoc[1]) - 1);
-            let pos2 = new vscode.Position(parseInt(rawLoc[2]) - 1, parseInt(rawLoc[3]) - 1);
-            let loc = new vscode.Range(pos1, pos2);
+            let loc = this.getRangeFromRawString(item[1]);
             let error;
             if (/error.*/.test(item[2])) {
                 error = vscode.DiagnosticSeverity.Error;
